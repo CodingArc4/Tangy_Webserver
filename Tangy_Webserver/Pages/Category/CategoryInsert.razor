@@ -1,0 +1,80 @@
+﻿@page "/category/create"
+@page "/category/edit/{id:int}"
+@attribute [Authorize]
+
+@using Tangy_Busines.Repository.IRepository
+@using Tangy_Models
+
+@inject ICategoryRepository _category
+@inject NavigationManager _navigationManager
+
+<div class="row my-2">
+    <h3 class="class-title text-primary mb-3 ml-3">@Title Category</h3>
+
+    <div class="col-10">
+        @if (IsLoading)
+        {
+            <div class="text-center">
+                <img src="/images/loading.gif" />
+            </div>
+        }else{
+        <EditForm Model="Category" OnValidSubmit="categoryInsert">
+            <DataAnnotationsValidator/>
+            @* <ValidationSummary/> *@
+            <div class="form-group">
+                <label>Name</label>
+                <InputText @bind-Value="Category.Name" class="form-control"></InputText>
+                <ValidationMessage For="()=> Category.Name"></ValidationMessage>
+            </div>
+            <div class="form-control">
+                <button class="btn btn-primary">@Title</button>
+                <NavLink href="category" class="btn btn-secondary">Back To Index.</NavLink>
+            </div>
+        </EditForm>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+
+    private CategoryDto Category { get; set; } = new CategoryDto();
+    public bool IsLoading { get; set; } = true;
+    private string Title { get; set; } = "Create";
+
+    private void categoryInsert()
+    {
+        if(Category.Id == 0)
+        {
+            _category.Create(Category);
+            
+        }
+        else
+        {
+            _category.Update(Category);
+        }
+
+        _navigationManager.NavigateTo("category");
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if(Id == 0)
+        {
+            IsLoading = false;
+        }
+        else
+        {
+            Title = "Edit";
+            await Task.Run(LoadCategories);
+        }
+    }
+
+    private void LoadCategories()
+    {
+        Category = _category.Get(Id);
+        IsLoading = false;
+    }
+}

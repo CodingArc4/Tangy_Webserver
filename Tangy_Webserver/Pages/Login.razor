@@ -1,0 +1,70 @@
+﻿@page "/login"
+
+@using Microsoft.AspNetCore.Components.Forms
+@using System.Web
+@using Tangy_Models
+@using Tangy_Webserver.Serivce.IService
+@inject IAuthenticationService IAuthService
+@inject NavigationManager nav
+
+<div class="row">
+    <div class="col-lg-4 offset-lg-4 pt-5 pb-4 border">
+        <div class="mb-3 text-center">
+            <h3>Login</h3>
+        </div>
+        <EditForm Model="@signInModel" OnValidSubmit="LoginUser">
+            <div class="mb-3">
+                <label for="username">Username</label>
+                <InputText @bind-Value="@signInModel.UserName" class="form-control" placeholder="Username" />
+                <ValidationMessage For="@(() => signInModel.UserName)" />
+            </div>
+            <div class="mb-3">
+                <label for="password">Password</label>
+                <InputText @bind-Value="@signInModel.Password" type="password" class="form-control" placeholder="Password" />
+                <ValidationMessage For="@(() => signInModel.Password)" />
+            </div>
+            <div class="mb-3 d-grid gap-2">
+                <button @* @onclick="Authenticate" *@ type="submit" class="btn btn-primary">Login</button>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    private SignInRequestDTO signInModel = new();
+    public bool IsProcessing { get; set; } = false;
+    public bool ShowSignInErrors { get; set; }
+    public string Errors { get; set; }
+
+    public string ReturnUrl { get; set; }
+    
+    private async Task LoginUser()
+    {
+        ShowSignInErrors = false;
+        IsProcessing = true;
+        var result = await IAuthService.SignIn(signInModel);
+        if (result.IsAuthSuccessful)
+        {
+            //regiration is successful
+            var absoluteUri = new Uri(nav.Uri);
+            var queryParam = HttpUtility.ParseQueryString(absoluteUri.Query);
+            ReturnUrl = queryParam["returnUrl"];
+            if (string.IsNullOrEmpty(ReturnUrl))
+            {
+                nav.NavigateTo("/");
+            }
+            else
+            {
+                nav.NavigateTo("/" + ReturnUrl);
+            }
+        }
+        else
+        {
+            //failure
+            Errors = result.ErrorMessage;
+            ShowSignInErrors = true;
+
+        }
+        IsProcessing = false;
+    }
+}
