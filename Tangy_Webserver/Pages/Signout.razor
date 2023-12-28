@@ -1,0 +1,17 @@
+﻿@page "/signout"
+@using Tangy_Webserver.Serivce.IService
+@inject IAuthenticationService _authSerivce
+@inject NavigationManager _navigationManager
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await LogoutAndNavigate();
+    }
+
+    private async Task LogoutAndNavigate()
+    {
+        await _authSerivce.Logout();
+        _navigationManager.NavigateTo("/");
+    }
+}

@@ -1,9 +1,8 @@
 ﻿using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
-using System.Text;
 using Tangy_Common;
 using Tangy_DataAccess;
 using Tangy_Models;
@@ -14,12 +13,12 @@ namespace TangyWeb_Server.Service
 {
     public class AuthenticationService:IAuthenticationService
     {
-        private readonly ILocalStorageService _localStorageService;
-        private readonly AuthenticationStateProvider _authStateProvider;
+        private readonly ProtectedLocalStorage _localStorageService;       
+        private readonly AuthenticationStateProvider _authStateProvider; 
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly RoleManager<IdentityRole> _roleManager;
-        public AuthenticationService(ILocalStorageService localStorageService, AuthenticationStateProvider authStateProvider
+        public AuthenticationService(ProtectedLocalStorage localStorageService, AuthenticationStateProvider authStateProvider
             , UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, RoleManager<IdentityRole> roleManager)
         {
             _localStorageService = localStorageService;
@@ -32,7 +31,7 @@ namespace TangyWeb_Server.Service
         public async Task<SignInResponseDTO> SignIn(SignInRequestDTO signInRequestDTO)
         {
             var user = await _userManager.FindByEmailAsync(signInRequestDTO.UserName);
-            var result = await _signInManager.CheckPasswordSignInAsync(user, signInRequestDTO.Password, false);
+            var result = await _signInManager.CheckPasswordSignInAsync(user, signInRequestDTO.Password,false);
 
             if (result.Succeeded)
             {
@@ -50,7 +49,7 @@ namespace TangyWeb_Server.Service
                         PhoneNumber = user.PhoneNumber
                     }
                 };
-                await _localStorageService.SetItemAsync(SD.Local_UserDetails, userDTO);
+                await _localStorageService.SetAsync(SD.Local_UserDetails, userDTO);
                 ((AuthStateProvider)_authStateProvider).NotifyUserLoggedIn(claims);
                 return new SignInResponseDTO() { IsAuthSuccessful = true };
             }
@@ -134,12 +133,9 @@ namespace TangyWeb_Server.Service
 
         public async Task Logout()
         {
-            await _localStorageService.RemoveItemAsync(SD.Local_OrderDetails);
+            await _localStorageService.DeleteAsync(SD.Local_UserDetails);
             ((AuthStateProvider)_authStateProvider).NotifyUserLogout();
         }
-
-        //================================================================================================
-     
     }
 }
 

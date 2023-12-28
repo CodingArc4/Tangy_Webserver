@@ -48,9 +48,6 @@ namespace Tangy_Webserver
             builder.Services.AddScoped<AuthenticationStateProvider, AuthStateProvider>();
             builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 
-            builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-                .AddCookie();
-
             builder.Services.AddAuthorization();
 
             var app = builder.Build();
