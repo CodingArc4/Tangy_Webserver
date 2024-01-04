@@ -1,0 +1,14 @@
+﻿@page "/signout"
+@using Tangy_DataAccess
+@inject NavigationManager Navigation
+
+<PageTitle>Log out</PageTitle>
+
+<Signout TUser="ApplicationUser" OnLogout="HandleLogout" />
+
+@code {
+    private void HandleLogout()
+    {
+        Navigation.NavigateTo("/");
+    }
+}

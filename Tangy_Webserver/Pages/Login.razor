@@ -1,7 +1,10 @@
-﻿@page "/login"
+﻿@* @page "/login" *@
 
+@typeparam TUser where TUser : class
 @using Microsoft.AspNetCore.Components.Forms
 @using System.Web
+@inject IBlazorSignInManager<TUser> SignInManager
+@using TangyWeb_Server.Classes
 @using Tangy_Models
 @using Tangy_Webserver.Serivce.IService
 @inject IAuthenticationService IAuthService
@@ -12,7 +15,7 @@
         <div class="mb-3 text-center">
             <h3>Login</h3>
         </div>
-        <EditForm Model="@signInModel" OnValidSubmit="LoginUser">
+        <EditForm Model="@signInModel" >
             <div class="mb-3">
                 <label for="username">Username</label>
                 <InputText @bind-Value="@signInModel.UserName" class="form-control" placeholder="Username" />
@@ -24,13 +27,53 @@
                 <ValidationMessage For="@(() => signInModel.Password)" />
             </div>
             <div class="mb-3 d-grid gap-2">
-                <button @* @onclick="Authenticate" *@ type="submit" class="btn btn-primary">Login</button>
+                <button @onclick="HandleSubmit" type="submit" class="btn btn-primary">Login</button>
             </div>
         </EditForm>
     </div>
 </div>
 
 @code {
+    private EditContext? editContext;
+    private SignInRequestDTO signInModel = new();
+    private ValidationMessageStore? messageStore;
+
+    [Parameter]
+    public EventCallback OnLogin { get; set; }
+
+    [Parameter]
+    public string FailureMessage { get; set; } = "Login failed. Please check the email address and password.";
+
+    protected override void OnInitialized()
+    {
+        editContext = new(signInModel);
+        messageStore = new(editContext);
+    }
+
+    private async Task HandleSubmit()
+    {
+        messageStore?.Clear();
+
+        if (editContext?.Validate() != true)
+        {
+            return;
+        }
+
+        var result = await SignInManager.PasswordSignInAsync(signInModel.UserName, signInModel.Password, false, lockoutOnFailure: false);
+        if (result.Succeeded)
+        {
+            await OnLogin.InvokeAsync();
+        }
+        else
+        {
+            messageStore?.Add(() => signInModel, FailureMessage);
+            editContext.NotifyValidationStateChanged();
+        }
+    }
+}
+
+
+@* @code {
     private SignInRequestDTO signInModel = new();
     public bool IsProcessing { get; set; } = false;
     public bool ShowSignInErrors { get; set; }
@@ -67,4 +110,6 @@
         }
         IsProcessing = false;
     }
-}
+} *@
+
+

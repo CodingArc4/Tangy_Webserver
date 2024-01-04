@@ -1,0 +1,14 @@
+﻿@page "/login"
+@using Tangy_DataAccess
+@inject NavigationManager Navigation
+
+<h3>LoginComponent</h3>
+
+<Login TUser="ApplicationUser" OnLogin="HandleLogin" />
+
+@code {
+    private void HandleLogin()
+    {
+        Navigation.NavigateTo("/");
+    }
+}

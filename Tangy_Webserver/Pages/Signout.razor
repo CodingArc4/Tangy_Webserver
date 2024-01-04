@@ -1,5 +1,6 @@
-﻿@page "/signout"
-@using Tangy_Webserver.Serivce.IService
+﻿@using TangyWeb_Server.Classes
+
+@* @using Tangy_Webserver.Serivce.IService
 @inject IAuthenticationService _authSerivce
 @inject NavigationManager _navigationManager
 
@@ -13,5 +14,32 @@
     {
         await _authSerivce.Logout();
         _navigationManager.NavigateTo("/");
+    }
+}
+ *@
+
+@typeparam TUser where TUser : class
+
+@inject IBlazorSignInManager<TUser> SignInManager
+
+<p>Logging out...</p>
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback OnLogout { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = (await authenticationStateTask).User;
+
+        if (SignInManager.IsSignedIn(user))
+        {
+            await SignInManager.SignOutAsync();
+        }
+
+        await OnLogout.InvokeAsync();
     }
 }

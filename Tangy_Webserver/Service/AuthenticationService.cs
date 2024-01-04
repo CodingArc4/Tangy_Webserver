@@ -1,4 +1,5 @@
-﻿using Blazored.LocalStorage;
+﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.AspNetCore.Identity;
@@ -11,13 +12,14 @@ using Tangy_Webserver.Service;
 
 namespace TangyWeb_Server.Service
 {
-    public class AuthenticationService:IAuthenticationService
+    public class AuthenticationService: Tangy_Webserver.Serivce.IService.IAuthenticationService
     {
         private readonly ProtectedLocalStorage _localStorageService;       
         private readonly AuthenticationStateProvider _authStateProvider; 
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly RoleManager<IdentityRole> _roleManager;
+
         public AuthenticationService(ProtectedLocalStorage localStorageService, AuthenticationStateProvider authStateProvider
             , UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, RoleManager<IdentityRole> roleManager)
         {
@@ -28,15 +30,17 @@ namespace TangyWeb_Server.Service
             _roleManager = roleManager;
         }
 
+
         public async Task<SignInResponseDTO> SignIn(SignInRequestDTO signInRequestDTO)
         {
             var user = await _userManager.FindByEmailAsync(signInRequestDTO.UserName);
-            var result = await _signInManager.CheckPasswordSignInAsync(user, signInRequestDTO.Password,false);
+            var result = await _signInManager.CheckPasswordSignInAsync(user, signInRequestDTO.Password, false);
 
             if (result.Succeeded)
             {
                 var claims = await GetClaims(user);
 
+                ((AuthStateProvider)_authStateProvider).NotifyUserLoggedIn(claims);
 
                 var userDTO = new SignInResponseDTO
                 {
@@ -46,12 +50,12 @@ namespace TangyWeb_Server.Service
                         Name = user.Name,
                         Id = user.Id,
                         Email = user.Email,
-                        PhoneNumber = user.PhoneNumber
+                        PhoneNumber = user.PhoneNumber,
+                        ExpiryDate = DateTimeOffset.UtcNow.Add(TimeSpan.FromMinutes(30)).ToUnixTimeSeconds()
                     }
                 };
-                await _localStorageService.SetAsync(SD.Local_UserDetails, userDTO);
-                ((AuthStateProvider)_authStateProvider).NotifyUserLoggedIn(claims);
-                return new SignInResponseDTO() { IsAuthSuccessful = true };
+
+                return new SignInResponseDTO { IsAuthSuccessful = true };
             }
             else
             {
@@ -62,6 +66,50 @@ namespace TangyWeb_Server.Service
                 };
             }
         }
+
+        //public async Task<SignInResponseDTO> SignIn(SignInRequestDTO signInRequestDTO)
+        //{
+        //    var user = await _userManager.FindByEmailAsync(signInRequestDTO.UserName);
+        //    var result = await _signInManager.CheckPasswordSignInAsync(user, signInRequestDTO.Password,false);
+
+        //    if (result.Succeeded)
+        //    {
+        //        var claims = await GetClaims(user);
+
+        //        var authProperties = new AuthenticationProperties
+        //        {
+        //           ExpiresUtc = DateTimeOffset.UtcNow.Add(TimeSpan.FromMinutes(30)) // Set your desired expiration time
+        //        };
+
+        //        // Sign in the user using cookies
+        //        await _signInManager.SignInAsync(user, authProperties);
+
+        //        var userDTO = new SignInResponseDTO
+        //        {
+        //            IsAuthSuccessful = true,
+        //            UserDTO = new UserDTO
+        //            {
+        //                Name = user.Name,
+        //                Id = user.Id,
+        //                Email = user.Email,
+        //                PhoneNumber = user.PhoneNumber,
+        //                ExpiryDate = authProperties.ExpiresUtc?.ToUnixTimeSeconds() ?? 0
+
+        //            }
+        //        };
+        //        //await _localStorageService.SetAsync(SD.Local_UserDetails, userDTO);
+        //        ((AuthStateProvider)_authStateProvider).NotifyUserLoggedIn(claims);
+        //        return new SignInResponseDTO() { IsAuthSuccessful = true };
+        //    }
+        //    else
+        //    {
+        //        return new SignInResponseDTO
+        //        {
+        //            IsAuthSuccessful = false,
+        //            ErrorMessage = "Invalid Authentication"
+        //        };
+        //    }
+        //}
 
         public async Task<SignUpResponseDTO> SignUp(SignUpRequestDTO signUpRequestDTO)
         {
@@ -85,14 +133,15 @@ namespace TangyWeb_Server.Service
 
             var result = await _userManager.CreateAsync(user, signUpRequestDTO.Password);
 
-            //if (!result.Succeeded)
-            //{
-            //    return new SignUpResponseDTO
-            //    {
-            //        IsRegisterationSuccessful = false,
-            //        Errors = result.Errors.Select(u => u.Description).ToList()
-            //    };
-            //}
+            if (!result.Succeeded)
+            {
+                return new SignUpResponseDTO
+                {
+                    IsRegisterationSuccessful = false,
+                    Errors = result.Errors.Select(u => u.Description).ToList()
+                };
+            }
+
             if (result.Succeeded)
 			{
 
@@ -107,7 +156,6 @@ namespace TangyWeb_Server.Service
 				}
 				return new SignUpResponseDTO() { IsRegisterationSuccessful = true };
 			}
-//=============================================================
             return new SignUpResponseDTO
             {
                 IsRegisterationSuccessful = true
